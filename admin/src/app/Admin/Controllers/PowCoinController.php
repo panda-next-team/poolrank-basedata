@@ -131,7 +131,7 @@ class PowCoinController extends Controller
         $show->field('list_order', "自定义排序");
         $show->created_at('创建时间');
         $show->updated_at('更新时间');
-
+        15232536440
         return $show;
     }
 

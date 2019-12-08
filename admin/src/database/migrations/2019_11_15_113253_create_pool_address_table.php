@@ -16,11 +16,11 @@ class CreatePoolAddressTable extends Migration
         Schema::create('pool_address', function (Blueprint $table) {
             $table->increments('id');
             $table->string('address', "100")->index()->comment('地址');
-            $table->string('pool_id')->index()->comment('矿池id');
-            $table->string('coin_id')->index()->comment('币种id');
+            $table->integer('pool_id')->index()->comment('矿池id');
+            $table->integer('coin_id')->index()->comment('币种id');
             $table->tinyInteger('type')->index()->comment('类型');
-            $table->integer('created_at_ts')->comment('创建时间戳');
-            $table->integer('updated_at_ts')->comment('更新时间戳');
+            $table->integer('created_at_ts')->index()->comment('创建时间戳');
+            $table->integer('updated_at_ts')->index()->comment('更新时间戳');
             $table->timestamps();
             $table->unique(["coin_id", "pool_id", "type", "address"]);
         });

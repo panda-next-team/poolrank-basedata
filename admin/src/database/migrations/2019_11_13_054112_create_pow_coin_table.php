@@ -18,9 +18,9 @@ class CreatePowCoinTable extends Migration
             $table->string('name', "15")->unique()->comment('中文名称');
             $table->string('en_name', "15")->unique()->comment('英文名称');
             $table->string('en_tag', "10")->unique()->comment('英文缩写');
-            $table->string('max_supply')->comment('最大供应总量');
+            $table->double('max_supply')->comment('最大供应总量');
             $table->integer('algorithm_id')->index()->comment('算法id');
-            $table->string('release_date')->comment('发行日期');
+            $table->date('release_date')->comment('发行日期');
             $table->integer('block_time')->comment('理论出块时间(秒)');
             $table->string('website_url')->comment('官网 url');
             $table->string('github_url')->comment('github url');

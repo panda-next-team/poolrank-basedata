@@ -17,7 +17,7 @@ type PowCoinService struct {
 func (s *PowCoinService) CountPowCoins(ctx context.Context, in *empty.Empty) (*pb.CountPowCoinsResponse, error) {
 	powCoin := new(model.PowCoin)
 	session := s.Engine.NoCache()
-	total,err := session.Count(powCoin)
+	total, err := session.Count(powCoin)
 
 	if err != nil {
 		st := status.New(codes.Internal, "Server internal error")
@@ -28,6 +28,10 @@ func (s *PowCoinService) CountPowCoins(ctx context.Context, in *empty.Empty) (*p
 }
 
 func (s *PowCoinService) GetPowCoin(ctx context.Context, in *pb.GetPowCoinRequest) (*pb.GetPowCoinResponse, error) {
+	if in.Id <= 0 {
+		st := status.New(codes.InvalidArgument, "Invalid argument id")
+		return nil, st.Err()
+	}
 
 	powCoin := new(model.PowCoin)
 	has, err := s.Engine.Id(in.Id).Get(powCoin)
@@ -45,6 +49,28 @@ func (s *PowCoinService) GetPowCoin(ctx context.Context, in *pb.GetPowCoinReques
 	pbPowCoin := loadPbPowCoin(powCoin)
 
 	return &pb.GetPowCoinResponse{Coin: pbPowCoin}, nil
+}
+
+func (s *PowCoinService) GetPowCoinID(ctx context.Context, in *pb.GetPowCoinIDRequest) (*pb.GetPowCoinIDResponse, error) {
+	if in.EnTag == "" {
+		st := status.New(codes.InvalidArgument, "Invalid argument en_tag")
+		return nil, st.Err()
+	}
+
+	powCoin := new(model.PowCoin)
+	has, err := s.Engine.Where("en_tag = ?", in.EnTag).Get(powCoin)
+
+	if err != nil {
+		st := status.New(codes.Internal, "Server internal error")
+		return nil, st.Err()
+	}
+
+	if !has {
+		st := status.New(codes.NotFound, "Not found entity")
+		return nil, st.Err()
+	}
+
+	return &pb.GetPowCoinIDResponse{Id: powCoin.Id}, nil
 }
 
 func loadPbPowCoin(model *model.PowCoin) *pb.Pow_Coin {

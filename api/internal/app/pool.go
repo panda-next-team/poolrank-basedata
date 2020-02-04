@@ -15,31 +15,35 @@ type PoolService struct {
 }
 
 func (s *PoolService) GetPoolAddresses(ctx context.Context, in *pb.GetPoolAddressesRequest) (*pb.GetPoolAddressesResponse, error) {
-	if in.PoolId <= 0 {
-		st := status.New(codes.InvalidArgument, "Invalid argument pool_id")
-		return nil, st.Err()
-	}
-
 	if in.CoinId <= 0 {
-		st := status.New(codes.InvalidArgument, "Invalid argument pool_id")
+		st := status.New(codes.InvalidArgument, "Invalid argument coin_id")
 		return nil, st.Err()
 	}
-
-	pool := new(model.Pool)
-	has, err := s.Engine.Id(in.PoolId).Get(pool)
-
-	if err != nil {
-		st := status.New(codes.Internal, "Server internal error.")
-		return nil, st.Err()
-	}
-
-	if !has {
-		st := status.New(codes.NotFound, "Not found entity.")
-		return nil, st.Err()
-	}
-
+	var err error
 	poolAddresses := make([]*model.PoolAddress, 0)
-	err = s.Engine.Where("pool_id = ?", in.PoolId).And("coin_id = ?", in.CoinId).Find(&poolAddresses)
+	session := s.Engine.Where("coin_id = ?", in.CoinId)
+	if in.PoolId > 0 {
+		pool := new(model.Pool)
+		has, err := s.Engine.Id(in.PoolId).Get(pool)
+
+		if err != nil {
+			st := status.New(codes.Internal, "Server internal error.")
+			return nil, st.Err()
+		}
+
+		if !has {
+			st := status.New(codes.NotFound, "Not found entity.")
+			return nil, st.Err()
+		}
+
+		session.And("pool_id = ?", in.PoolId)
+	}
+
+	if in.Type > 0 {
+		session.And("type = ?", in.Type)
+	}
+
+	err = session.Find(&poolAddresses)
 
 	if err != nil {
 		st := status.New(codes.Internal, "Server internal error.")
@@ -55,26 +59,27 @@ func (s *PoolService) GetPoolAddresses(ctx context.Context, in *pb.GetPoolAddres
 }
 
 func (s *PoolService) GetPoolCoinbaseTags(ctx context.Context, in *pb.GetPoolCoinbaseTagsRequest) (*pb.GetPoolCoinbaseTagsResponse, error) {
-	if in.PoolId <= 0 {
-		st := status.New(codes.InvalidArgument, "Invalid argument pool_id")
-		return nil, st.Err()
-	}
-
-	pool := new(model.Pool)
-	has, err := s.Engine.Id(in.PoolId).Get(pool)
-
-	if err != nil {
-		st := status.New(codes.Internal, "Server internal error.")
-		return nil, st.Err()
-	}
-
-	if !has {
-		st := status.New(codes.NotFound, "Not found entity.")
-		return nil, st.Err()
-	}
-
+	var err error
 	poolTags := make([]*model.PoolCoinbaseTag, 0)
-	err = s.Engine.Where("pool_id = ?", in.PoolId).Find(&poolTags)
+
+	if in.PoolId > 0 {
+		pool := new(model.Pool)
+		has, err := s.Engine.Id(in.PoolId).Get(pool)
+
+		if err != nil {
+			st := status.New(codes.Internal, "Server internal error.")
+			return nil, st.Err()
+		}
+
+		if !has {
+			st := status.New(codes.NotFound, "Not found entity.")
+			return nil, st.Err()
+		}
+
+		err = s.Engine.Where("pool_id = ?", in.PoolId).Find(&poolTags)
+	} else {
+		err = s.Engine.Find(&poolTags)
+	}
 
 	if err != nil {
 		st := status.New(codes.Internal, "Server internal error.")

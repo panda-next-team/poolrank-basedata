@@ -20,7 +20,7 @@ func main() {
 	app.Version = "0.1"
 	app.Compiled = time.Now()
 	app.Copyright = "(c) 2019 poolrank"
-	app.Usage = "Basedata Grpc server"
+	app.Usage = "Poolrank Basedata Grpc server"
 	app.Authors = []cli.Author{
 		cli.Author{
 			Name:  "Alex Zhou",
@@ -85,7 +85,7 @@ func main() {
 			Name:  "run",
 			Usage: "run grpc server",
 			Action: func(c *cli.Context) {
-				log.Println("basedata grpc server start, listen: ", config.Port)
+				log.Println("poolrank basedata grpc server start, listen: ", config.Port)
 
 				engine, engineErr := pkg.NewMysqlEngine(pkg.DriverName, pkg.GenerateMysqlSource(
 					config.Mysql.User, config.Mysql.Password, config.Mysql.Host,

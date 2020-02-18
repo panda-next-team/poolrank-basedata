@@ -8,6 +8,7 @@ import (
 	pb "github.com/panda-next-team/poolrank-proto/basedata"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"time"
 )
 
 type PoolService struct {
@@ -128,6 +129,51 @@ func (s *PoolService) GetPool(ctx context.Context, in *pb.GetPoolRequest) (*pb.G
 	pbPool := loadPbPool(pool)
 
 	return &pb.GetPoolResponse{Pool: pbPool}, nil
+}
+
+func (s *PoolService) AddPoolCoinbaseAddress(ctx context.Context, in *pb.AddPoolCoinbaseAddressRequest) (*pb.AddPoolCoinbaseAddressResponse, error) {
+	if in.CoinId <= 0 {
+		st := status.New(codes.InvalidArgument, "Invalid argument coin id")
+		return nil, st.Err()
+	}
+
+	if in.PoolId <= 0 {
+		st := status.New(codes.InvalidArgument, "Invalid argument pool id")
+		return nil, st.Err()
+	}
+
+	if in.Address == "" {
+		st := status.New(codes.InvalidArgument, "Invalid argument address")
+		return nil, st.Err()
+	}
+
+	poolAddress := new(model.PoolAddress)
+	has, err := s.Engine.Where("coin_id =? and pool_id =? and type = ? and address = ?", in.CoinId, in.PoolId,
+		in.Type, in.Address).Get(poolAddress)
+
+	if err != nil {
+		st := status.New(codes.Internal, "Server internal error")
+		return nil, st.Err()
+	}
+
+	if has {
+		st := status.New(codes.AlreadyExists, "Already exists entity")
+		return nil, st.Err()
+	}
+
+	poolAddress.CoinId = in.CoinId
+	poolAddress.PoolId = in.PoolId
+	poolAddress.Type = int32(in.Type)
+	poolAddress.Address = in.Address
+	poolAddress.UpdatedAtTs = int32(time.Now().Unix())
+	poolAddress.CreatedAtTs = int32(time.Now().Unix())
+
+	_, err = s.Engine.Insert(poolAddress)
+	if err != nil {
+		st := status.New(codes.Internal, "Server internal error")
+		return nil, st.Err()
+	}
+	return &pb.AddPoolCoinbaseAddressResponse{Result: true}, nil
 }
 
 func loadPbPool(model *model.Pool) *pb.Pool {

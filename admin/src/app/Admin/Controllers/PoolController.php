@@ -151,7 +151,9 @@ class PoolController extends Controller
 
         $form->text("name", "名称")->rules('required');
         $form->url("website_url", "官方网站")->rules("required");
-        $form->image('icon', 'icon')->sequenceName()->removable()->rules('nullable');
+        //$form->image('icon', 'icon')->sequenceName()->removable()->rules('nullable');
+        $form->text("icon", "ICON")->rules('required');
+
 
         $form->hasMany('tags', function (Form\NestedForm $form) {
             $form->text("tag", "标志")->placeholder(" ")->rules("required");

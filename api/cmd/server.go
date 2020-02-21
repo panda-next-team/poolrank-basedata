@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc"
 	pb "github.com/panda-next-team/poolrank-proto/basedata"
 	"log"
+	"math"
 	"net"
 	"os"
 	"time"
@@ -101,7 +102,7 @@ func main() {
 					log.Fatalf("failed to listen: %v", err)
 				}
 
-				server := grpc.NewServer()
+				server := grpc.NewServer(grpc.MaxRecvMsgSize(math.MaxInt64), grpc.MaxSendMsgSize(math.MaxInt64))
 				pb.RegisterPOWCoinServiceServer(server, &ctrl.PowCoinService{engine})
 				pb.RegisterPoolServiceServer(server, &ctrl.PoolService{engine})
 				pb.RegisterAlgorithmServiceServer(server, &ctrl.AlgorithmService{engine})

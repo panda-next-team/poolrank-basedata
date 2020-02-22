@@ -112,7 +112,9 @@ class PoolController extends Controller
 
         $show->id('ID');
         $show->name('名称');
-        $show->field("icon", "icon")->image();
+        $show->field("icon", "icon")->as(function($icon) {
+           return $icon ? sprintf("<img src=\"data:image/png;base64, %s\">", $icon) :"";
+        })->unescape();
         $show->field("website_url", "官网")->link();
         $show->field('status', "状态")->as(function ($status) {
             return $status ? '<span style="color:darkgreen">启用</span>' : '<span style="color:#8b0000">停用</span>';
@@ -152,7 +154,7 @@ class PoolController extends Controller
         $form->text("name", "名称")->rules('required');
         $form->url("website_url", "官方网站")->rules("required");
         //$form->image('icon', 'icon')->sequenceName()->removable()->rules('nullable');
-        $form->text("icon", "ICON")->rules('required');
+        $form->textarea("icon", "ICON")->rules('required');
 
 
         $form->hasMany('tags', function (Form\NestedForm $form) {

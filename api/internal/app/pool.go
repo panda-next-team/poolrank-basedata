@@ -294,6 +294,7 @@ func loadPbPool(model *model.Pool) *pb.Pool {
 	entity.Id = model.Id
 	entity.Name = model.Name
 	entity.WebsiteUrl = model.WebsiteUrl
+	entity.Icon = model.Icon
 	entity.Status = int32(model.Status)
 	entity.ListOrder = model.ListOrder
 	entity.CreatedAtTs = model.CreatedAtTs

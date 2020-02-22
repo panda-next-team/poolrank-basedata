@@ -244,7 +244,6 @@ func (s *PoolService) ListPools(ctx context.Context, in *pb.ListPoolsRequest) (*
 		return &pb.ListPoolsResponse{Total: int32(total)}, nil
 	}
 
-	fmt.Println(total)
 
 	var limit, skip int32
 	if in.Limit == 0 {
@@ -285,7 +284,6 @@ func (s *PoolService) ListPools(ctx context.Context, in *pb.ListPoolsRequest) (*
 	pbPools := make([]*pb.Pool, len(pools))
 
 	for index, pool := range pools {
-		fmt.Printf("%+v", pool)
 		pbPools[index] = loadPbPool(pool)
 	}
 	return &pb.ListPoolsResponse{Total: int32(total), Pools: pbPools}, nil

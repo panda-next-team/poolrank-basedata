@@ -2,13 +2,26 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-xorm/xorm"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/panda-next-team/poolrank-basedata/api/internal/app/model"
 	pb "github.com/panda-next-team/poolrank-proto/basedata"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"strings"
 	"time"
+)
+
+const (
+	DEFAULT_LIST_POOLS_LIMIT        = 100;
+	DEFAULT_LIST_POOLS_MAX_LIMIT    = 500;
+	DEFAULT_LIST_POOLS_SKIP         = 0;
+	DEFAULT_LIST_POOLS_SORT         = "id ASC";
+	PREFIX_LIST_POOLS_QUERY_FIELD   = "Q_"
+	PREFIX_LIST_POOLS_SORT_FIELD    = "S_"
+	LIST_POOLS_REQ_QUERY_BOOL_VALUE = "QueryBoolValue"
 )
 
 type PoolService struct {
@@ -174,6 +187,108 @@ func (s *PoolService) AddPoolCoinbaseAddress(ctx context.Context, in *pb.AddPool
 		return nil, st.Err()
 	}
 	return &pb.AddPoolCoinbaseAddressResponse{Result: true}, nil
+}
+
+func (s *PoolService) ListPools(ctx context.Context, in *pb.ListPoolsRequest) (*pb.ListPoolsResponse, error) {
+	if in.Limit < 0 {
+		st := status.New(codes.InvalidArgument, "Invalid argument limit")
+		return nil, st.Err()
+	}
+
+	if in.Skip < 0 {
+		st := status.New(codes.InvalidArgument, "Invalid argument skip")
+		return nil, st.Err()
+	}
+
+	var listPoolsRequestQueryOperators = map[pb.ListPoolsRequest_QueryOperator]string{
+		pb.ListPoolsRequest_EQ:  "=",
+		pb.ListPoolsRequest_NE:  "!=",
+		pb.ListPoolsRequest_GTE: ">=",
+		pb.ListPoolsRequest_LTE: "<=",
+		pb.ListPoolsRequest_LT:  "<",
+		pb.ListPoolsRequest_GT:  ">",
+	}
+
+	var queryString string
+	for _, query := range in.Queries {
+		field := strings.ToLower(strings.TrimLeft(query.Field.String(), PREFIX_LIST_POOLS_QUERY_FIELD))
+		operator := listPoolsRequestQueryOperators[query.Operator]
+
+		typeUrlData := strings.Split(query.Value.GetTypeUrl(), ".")
+		typeUrlSuffix := typeUrlData[len(typeUrlData)-1]
+
+		if typeUrlSuffix == LIST_POOLS_REQ_QUERY_BOOL_VALUE {
+			queryVal := &pb.ListPoolsRequest_QueryBoolValue{}
+			err := ptypes.UnmarshalAny(query.Value, queryVal)
+			if err != nil {
+				st := status.New(codes.Internal, fmt.Sprintf("Unmarshal query value error:%s", err))
+				return nil, st.Err()
+			}
+			queryString = fmt.Sprintf("%s %s ?", field, operator)
+
+			if queryVal.Value {
+				s.Engine.Where(queryString, 1)
+			} else {
+				s.Engine.Where(queryString, 0)
+			}
+		}
+	}
+
+	total, err := s.Engine.Count(new(model.Pool))
+	if err != nil {
+		st := status.New(codes.Internal, fmt.Sprintf("get total error:%s", err))
+		return nil, st.Err()
+	}
+
+	if in.OnlyTotal {
+		return &pb.ListPoolsResponse{Total: int32(total)}, nil
+	}
+
+	fmt.Println(total)
+
+	var limit, skip int32
+	if in.Limit == 0 {
+		limit = DEFAULT_LIST_POOLS_LIMIT
+	} else if in.Limit > DEFAULT_LIST_POOLS_MAX_LIMIT {
+		limit = DEFAULT_LIST_POOLS_MAX_LIMIT
+	} else {
+		limit = in.Limit
+	}
+
+	if in.Skip == 0 {
+		skip = DEFAULT_LIST_POOLS_SKIP
+	}
+
+	var sorts []string
+	if len(in.Sorts) == 0 {
+		sorts = make([]string, 1)
+		sorts[0] = DEFAULT_LIST_POOLS_SORT
+	} else {
+		sorts = make([]string, len(in.Sorts))
+		for index, sort := range in.Sorts {
+			field := strings.ToLower(strings.TrimLeft(sort.Field.String(), PREFIX_LIST_POOLS_SORT_FIELD))
+			if sort.Direction == pb.ListPoolsRequest_ASC {
+				sorts[index] = field
+			} else {
+				sorts[index] = fmt.Sprintf("%s DESC", field)
+			}
+		}
+	}
+
+	var pools []*model.Pool
+	err = s.Engine.Limit(int(limit), int(skip)).OrderBy(strings.Join(sorts, ",")).Find(&pools)
+	if err != nil {
+		st := status.New(codes.Internal, fmt.Sprintf("get total error:%s", err))
+		return nil, st.Err()
+	}
+
+	pbPools := make([]*pb.Pool, len(pools))
+
+	for index, pool := range pools {
+		fmt.Printf("%+v", pool)
+		pbPools[index] = loadPbPool(pool)
+	}
+	return &pb.ListPoolsResponse{Total: int32(total), Pools: pbPools}, nil
 }
 
 func loadPbPool(model *model.Pool) *pb.Pool {
